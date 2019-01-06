@@ -60,7 +60,7 @@ INSTALL_LOCK = true
 SECRET_KEY   = $SECRET_KEY
 EOM
 
-docker run -d --name=gogs -p 10022:22 -p 127.0.0.1:8080:3000 -v /var/gogs:/data gogs/gogs
+docker run -d --name=gogs --restart unless-stopped -p 10022:22 -p 127.0.0.1:8080:3000 -v /var/gogs:/data gogs/gogs
 
 certbot --nginx -d $HOSTNAME --non-interactive --agree-tos --email admin@lunanode.com
 cat <<EOM >/etc/nginx/sites-enabled/default
@@ -87,3 +87,13 @@ server {
 EOM
 service nginx restart
 echo "0 */12 * * * root test -x /usr/bin/certbot && perl -e 'sleep int(rand(3600))' && certbot -q renew" >> /etc/crontab
+
+# setup upgrade script
+cat <<EOM >/root/upgrade.sh
+#!/bin/bash
+docker pull gogs/gogs
+docker stop gogs
+docker rm gogs
+docker run -d --name=gogs --restart unless-stopped -p 10022:22 -p 127.0.0.1:8080:3000 -v /var/gogs:/data gogs/gogs
+EOM
+chmod +x /root/upgrade.sh
